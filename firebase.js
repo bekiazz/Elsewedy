@@ -1,14 +1,14 @@
-// Import Firebase SDK from CDN
+// Import Firebase modules
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
-// Your Firebase configuration
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAcj0f-uUkT1NRoDa69WEn0CYOjmtLv7p0",
   authDomain: "elsewedy-6360f.firebaseapp.com",
   projectId: "elsewedy-6360f",
-  storageBucket: "elsewedy-6360f.firebasestorage.app",
+  storageBucket: "elsewedy-6360f.appspot.com",
   messagingSenderId: "942337978548",
   appId: "1:942337978548:web:1a4f48a86ca17e23cca7e1",
   measurementId: "G-FE5KREW6RK"

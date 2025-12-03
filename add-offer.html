@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Add Offer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h2>Add Offer</h2>
+  <input id="title" type="text" placeholder="Offer Title">
+  <input id="description" type="text" placeholder="Offer Description">
+  <button id="addBtn">Add Offer</button>
+  <button onclick="window.location.href='dashboard.html'">Back to Dashboard</button>
+
+  <script type="module">
+    import { db } from "./firebase.js";
+    import { collection, addDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
+    const addBtn = document.getElementById("addBtn");
+
+    addBtn.addEventListener("click", async () => {
+      const title = document.getElementById("title").value;
+      const description = document.getElementById("description").value;
+
+      if(title && description) {
+        try {
+          await addDoc(collection(db, "offers"), {
+            title,
+            description,
+            createdAt: new Date()
+          });
+          alert("Offer added successfully!");
+          document.getElementById("title").value = "";
+          document.getElementById("description").value = "";
+        } catch (error) {
+          alert("Error adding offer: " + error.message);
+        }
+      } else {
+        alert("Please fill in all fields.");
+      }
+    });
+  </script>
+</body>
+</html>
+
+
+

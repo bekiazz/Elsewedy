@@ -28,8 +28,11 @@
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
     import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
+    // Redirect to login if not authenticated
     onAuthStateChanged(auth, (user) => {
-      if (!user) window.location.href = 'login.html';
+      if (!user) {
+        window.location.href = "index.html"; // ✅ Fixed: was "login.html"
+      }
     });
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -37,37 +40,48 @@
     const container = document.getElementById('offerDetails');
 
     if (!offerId) {
-      container.innerHTML = "<p>❌ No offer ID provided.</p>";
+      container.innerHTML = "<p class='message message-error'>❌ No offer ID provided.</p>";
       return;
     }
 
     async function loadOffer() {
       try {
-        const docSnap = await getDoc(doc(db, "offers", offerId));
+        const docRef = doc(db, "offers", offerId);
+        const docSnap = await getDoc(docRef);
+
         if (!docSnap.exists()) {
-          container.innerHTML = "<p>Offer not found.</p>";
+          container.innerHTML = "<p class='message message-error'>Offer not found.</p>";
           return;
         }
 
         const d = docSnap.data();
-        const formatDate = (date) => date?.toDate?.() ? new Date(date.toDate()).toLocaleDateString() : 'N/A';
-        const formatCurrency = (val) => val ? "$" + val.toLocaleString() : "N/A";
+        const formatDate = (firestoreDate) => {
+          if (!firestoreDate) return 'N/A';
+          // Handle both Timestamp and JS Date
+          const date = firestoreDate.toDate ? firestoreDate.toDate() : new Date(firestoreDate);
+          return date.toLocaleDateString();
+        };
+        const formatCurrency = (val) => val ? "$" + Number(val).toLocaleString() : "N/A";
 
         container.innerHTML = `
-          <h2>${d.projectName}</h2>
+          <h2>${escapeHtml(d.projectName || 'N/A')}</h2>
           <div class="form-row">
-            <div class="form-group"><strong>Product:</strong> ${d.product}</div>
+            <div class="form-group"><strong>Product:</strong> ${escapeHtml(d.product || 'N/A')}</div>
             <div class="form-group"><strong>Value:</strong> ${formatCurrency(d.value)}</div>
-            <div class="form-group"><strong>Status:</strong> <span class="status ${d.status}">${d.status}</span></div>
+            <div class="form-group"><strong>Status:</strong> 
+              <span class="status ${d.status === 'sent' ? 'sent' : 'pending'}">
+                ${d.status || 'pending'}
+              </span>
+            </div>
           </div>
 
           <h3>Company & Contact</h3>
           <div class="form-row">
-            <div class="form-group"><strong>Company:</strong> ${d.company}</div>
-            <div class="form-group"><strong>Buyer:</strong> ${d.buyer}</div>
-            <div class="form-group"><strong>Package Code:</strong> ${d.customerPackageCode}</div>
-            <div class="form-group"><strong>Email:</strong> ${d.contacts.email}</div>
-            <div class="form-group"><strong>Phone:</strong> ${d.contacts.phone || 'N/A'}</div>
+            <div class="form-group"><strong>Company:</strong> ${escapeHtml(d.company || 'N/A')}</div>
+            <div class="form-group"><strong>Buyer:</strong> ${escapeHtml(d.buyer || 'N/A')}</div>
+            <div class="form-group"><strong>Package Code:</strong> ${escapeHtml(d.customerPackageCode || 'N/A')}</div>
+            <div class="form-group"><strong>Email:</strong> ${escapeHtml(d.contacts?.email || 'N/A')}</div>
+            <div class="form-group"><strong>Phone:</strong> ${escapeHtml(d.contacts?.phone || 'N/A')}</div>
           </div>
 
           <h3>Dates</h3>
@@ -79,17 +93,28 @@
           </div>
 
           <h3>Additional Info</h3>
-          <div class="form-group full-width"><strong>Factory:</strong> ${d.factory || 'N/A'}</div>
+          <div class="form-group full-width"><strong>Factory:</strong> ${escapeHtml(d.factory || 'N/A')}</div>
           <div class="form-group full-width"><strong>Probability:</strong> ${d.probability || 0}%</div>
-          <div class="form-group full-width"><strong>Comment Status:</strong> ${d.commentStatus || 'N/A'}</div>
-          <div class="form-group full-width"><strong>Comment:</strong> ${d.comment || '—'}</div>
+          <div class="form-group full-width"><strong>Comment Status:</strong> ${escapeHtml(d.commentStatus || 'N/A')}</div>
+          <div class="form-group full-width"><strong>Comment:</strong> ${escapeHtml(d.comment || '') || '—'}</div>
 
           <h3>Description</h3>
-          <div class="form-group full-width">${d.description.replace(/\n/g, '<br>')}</div>
+          <div class="form-group full-width">${escapeHtml(d.description || '').replace(/\n/g, '<br>')}</div>
         `;
-      } catch (e) {
-        container.innerHTML = `<p class="message message-error">Error: ${e.message}</p>`;
+      } catch (error) {
+        console.error("View Offer Error:", error);
+        container.innerHTML = `<p class="message message-error">❌ Failed to load offer: ${error.message}</p>`;
       }
+    }
+
+    function escapeHtml(unsafe) {
+      if (typeof unsafe !== 'string') return String(unsafe);
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
 
     loadOffer();

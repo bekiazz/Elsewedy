@@ -230,3 +230,25 @@ main {
 .auth-form h2 {
   margin-bottom: 24px;
 }
+/* Expiry Notifications */
+.expiry-alert {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-left: 10px;
+  color: white;
+}
+
+.expiry-alert.urgent {
+  background-color: #e60012; /* red */
+}
+
+.expiry-alert.warning {
+  background-color: #ff8f00; /* orange */
+}
+
+.expiry-alert.notice {
+  background-color: #ffb300; /* amber */
+}

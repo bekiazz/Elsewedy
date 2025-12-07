@@ -58,30 +58,45 @@
         }
 
         snap.forEach(doc => {
-          const d = doc.data();
-          const statusClass = d.status === "sent" ? "sent" : "pending";
-          const value = d.value ? "$" + d.value.toLocaleString() : "N/A";
-          const expiry = d.expiryDate?.toDate ? d.expiryDate.toDate() : d.expiryDate;
-          const expiryStr = expiry ? new Date(expiry).toLocaleDateString() : "N/A";
+  const d = doc.data();
+  const statusClass = d.status === "sent" ? "sent" : "pending";
+  const value = d.value ? "$" + d.value.toLocaleString() : "N/A";
+  const expiryDate = d.expiryDate?.toDate ? d.expiryDate.toDate() : new Date(d.expiryDate);
+  const expiryStr = expiryDate ? expiryDate.toLocaleDateString() : "N/A";
 
-          const card = document.createElement("div");
-          card.className = "offer-card";
-          card.innerHTML = `
-            <h4>${escapeHtml(d.projectName)}</h4>
-            <p><strong>Company:</strong> ${escapeHtml(d.company)}</p>
-            <p><strong>Package:</strong> ${escapeHtml(d.customerPackageCode)}</p>
-            <p><strong>Value:</strong> ${value}</p>
-            <p><strong>Expiry:</strong> ${expiryStr}</p>
-            <p><strong>Status:</strong> <span class="status ${statusClass}">${d.status}</span></p>
-            <div class="offer-actions">
-              <button class="btn" onclick="window.location.href='view-offer.html?id=${doc.id}'">👁️ View</button>
-              ${d.status === "pending" ? 
-                `<button class="btn" onclick="sendOffer('${doc.id}')">📤 Send</button>` : 
-                `<span>Sent: ${d.sentAt?.toDate?.().toLocaleDateString() || 'N/A'}</span>`}
-            </div>
-          `;
-          grid.appendChild(card);
-        });
+  // 🔔 Calculate days until expiry
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // normalize
+  const diffTime = expiryDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  let expiryAlert = "";
+  if (diffDays === 1) {
+    expiryAlert = `<span class="expiry-alert urgent">Expires tomorrow!</span>`;
+  } else if (diffDays === 2) {
+    expiryAlert = `<span class="expiry-alert warning">Expires in 2 days</span>`;
+  } else if (diffDays === 3) {
+    expiryAlert = `<span class="expiry-alert notice">Expires in 3 days</span>`;
+  }
+
+  const card = document.createElement("div");
+  card.className = "offer-card";
+  card.innerHTML = `
+    <h4>${escapeHtml(d.projectName)}</h4>
+    <p><strong>Company:</strong> ${escapeHtml(d.company)}</p>
+    <p><strong>Package:</strong> ${escapeHtml(d.customerPackageCode)}</p>
+    <p><strong>Value:</strong> ${value}</p>
+    <p><strong>Expiry:</strong> ${expiryStr} ${expiryAlert}</p>
+    <p><strong>Status:</strong> <span class="status ${statusClass}">${d.status}</span></p>
+    <div class="offer-actions">
+      <button class="btn" onclick="window.location.href='view-offer.html?id=${doc.id}'">👁️ View</button>
+      ${d.status === "pending" ? 
+        `<button class="btn" onclick="sendOffer('${doc.id}')">📤 Send</button>` : 
+        `<span>Sent: ${d.sentAt?.toDate?.().toLocaleDateString() || 'N/A'}</span>`}
+    </div>
+  `;
+  grid.appendChild(card);
+});
       } catch (e) {
         msg.className = "message message-error";
         msg.textContent = "Failed to load offers: " + e.message;

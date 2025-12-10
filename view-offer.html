@@ -19,162 +19,115 @@
 
   <main>
     <div class="container" id="offerDetails">
-      <h2>Loading offer...</h2>
-      <div id="debugInfo" style="display: none;"></div>
+      <h2>Debugging Offer Loading...</h2>
+      <div id="debugInfo" style="background: #f0f0f0; padding: 20px; margin: 10px 0; border-radius: 5px;">
+        <p id="debugText">Initializing...</p>
+      </div>
     </div>
   </main>
 
   <script type="module">
-    import { auth, db } from "./firebase.js";
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
-
-    // Debug: Show URL parameters
-    console.log("Current URL:", window.location.href);
-    console.log("URL Search:", window.location.search);
+    // Debug element
+    const debugText = document.getElementById('debugText');
     
-    const urlParams = new URLSearchParams(window.location.search);
-    const offerId = urlParams.get('id');
-    const container = document.getElementById('offerDetails');
-    const debugInfo = document.getElementById('debugInfo');
-
-    // Show debug info (remove in production)
-    debugInfo.innerHTML = `
-      <p>URL Parameters: ${window.location.search}</p>
-      <p>Offer ID: ${offerId || 'NOT FOUND'}</p>
-    `;
-    debugInfo.style.display = 'block';
-
-    if (!offerId) {
-      container.innerHTML = `
-        <div class="message message-error">
-          <h3>❌ No offer ID provided</h3>
-          <p>How to fix:</p>
-          <ul>
-            <li>Make sure you're clicking "View" from the dashboard</li>
-            <li>Check if the offer exists in Firebase</li>
-            <li>URL should look like: offer.html?id=YOUR_OFFER_ID</li>
-          </ul>
-          <a href="dashboard.html" class="btn">Return to Dashboard</a>
-        </div>
-      `;
-      return;
-    }
-
-    // Redirect to login if not authenticated
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.href = "index.html";
-      } else {
-        // Only load offer if user is authenticated
-        loadOffer();
-      }
-    });
-
-    async function loadOffer() {
-      try {
-        console.log("Loading offer with ID:", offerId);
-        
-        const docRef = doc(db, "offers", offerId);
-        const docSnap = await getDoc(docRef);
-
-        console.log("Document exists?", docSnap.exists());
-
-        if (!docSnap.exists()) {
-          container.innerHTML = `
-            <div class="message message-error">
-              <h3>❌ Offer not found</h3>
-              <p>The offer with ID "${offerId}" doesn't exist in the database.</p>
-              <a href="dashboard.html" class="btn">Return to Dashboard</a>
-            </div>
-          `;
-          return;
-        }
-
-        const d = docSnap.data();
-        console.log("Offer data:", d);
-
-        const formatDate = (firestoreDate) => {
-          if (!firestoreDate) return 'N/A';
-          try {
-            const date = firestoreDate.toDate ? firestoreDate.toDate() : new Date(firestoreDate);
-            return date.toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric'
-            });
-          } catch (e) {
-            console.error("Date formatting error:", e);
-            return 'Invalid Date';
-          }
-        };
-
-        const formatCurrency = (val) => {
-          if (!val && val !== 0) return "N/A";
-          return "$" + Number(val).toLocaleString('en-US');
-        };
-
-        container.innerHTML = `
-          <h2>${escapeHtml(d.projectName || 'N/A')}</h2>
-          
-          <div class="form-row">
-            <div class="form-group"><strong>Product:</strong> ${escapeHtml(d.product || 'N/A')}</div>
-            <div class="form-group"><strong>Value:</strong> ${formatCurrency(d.value)}</div>
-            <div class="form-group"><strong>Status:</strong> 
-              <span class="status ${d.status === 'sent' ? 'sent' : 'pending'}">
-                ${d.status || 'pending'}
-              </span>
-            </div>
-          </div>
-
-          <h3>Company & Contact</h3>
-          <div class="form-row">
-            <div class="form-group"><strong>Company:</strong> ${escapeHtml(d.company || 'N/A')}</div>
-            <div class="form-group"><strong>Buyer:</strong> ${escapeHtml(d.buyer || 'N/A')}</div>
-            <div class="form-group"><strong>Package Code:</strong> ${escapeHtml(d.customerPackageCode || 'N/A')}</div>
-            <div class="form-group"><strong>Email:</strong> ${escapeHtml(d.contacts?.email || d.email || 'N/A')}</div>
-            <div class="form-group"><strong>Phone:</strong> ${escapeHtml(d.contacts?.phone || d.phone || 'N/A')}</div>
-          </div>
-
-          <h3>Dates</h3>
-          <div class="form-row">
-            <div class="form-group"><strong>Start Date:</strong> ${formatDate(d.startDate)}</div>
-            <div class="form-group"><strong>Expiry Date:</strong> ${formatDate(d.expiryDate)}</div>
-            <div class="form-group"><strong>Delivery Date:</strong> ${formatDate(d.deliveryDate)}</div>
-            ${d.status === 'sent' && d.sentAt ? `<div class="form-group"><strong>Sent On:</strong> ${formatDate(d.sentAt)}</div>` : ''}
-          </div>
-
-          <h3>Additional Info</h3>
-          <div class="form-group"><strong>Factory:</strong> ${escapeHtml(d.factory || 'N/A')}</div>
-          <div class="form-group"><strong>Probability:</strong> ${d.probability || 0}%</div>
-          <div class="form-group"><strong>Comment Status:</strong> ${escapeHtml(d.commentStatus || 'N/A')}</div>
-          <div class="form-group"><strong>Comment:</strong> ${escapeHtml(d.comment || '') || '—'}</div>
-
-          <h3>Description</h3>
-          <div class="form-group full-width">${escapeHtml(d.description || '').replace(/\n/g, '<br>')}</div>
-        `;
-
-      } catch (error) {
-        console.error("View Offer Error:", error);
-        container.innerHTML = `
+    try {
+      debugText.textContent = 'Step 1: Script started...';
+      
+      // Get offer ID from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const offerId = urlParams.get('id');
+      debugText.textContent += `\nStep 2: Offer ID from URL: ${offerId || 'NOT FOUND'}`;
+      
+      if (!offerId) {
+        document.getElementById('offerDetails').innerHTML = `
           <div class="message message-error">
-            <h3>❌ Failed to load offer</h3>
-            <p>Error: ${error.message}</p>
+            <h3>❌ No offer ID in URL</h3>
+            <p>URL should be: offer.html?id=YOUR_OFFER_ID</p>
+            <p>Current URL: ${window.location.href}</p>
             <a href="dashboard.html" class="btn">Return to Dashboard</a>
           </div>
         `;
+        return;
       }
-    }
-
-    function escapeHtml(unsafe) {
-      if (unsafe == null) return 'N/A';
-      if (typeof unsafe !== 'string') return String(unsafe);
-      return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+      
+      debugText.textContent += '\nStep 3: Trying to import Firebase modules...';
+      
+      // Import Firebase
+      import { auth, db } from "./firebase.js";
+      import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+      import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+      
+      debugText.textContent += '\nStep 4: Firebase modules imported, checking auth...';
+      
+      // Check authentication
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          debugText.textContent += '\nStep 5: User not authenticated, redirecting...';
+          window.location.href = "index.html";
+          return;
+        }
+        
+        debugText.textContent += `\nStep 5: User authenticated (${user.email}), loading offer...`;
+        
+        try {
+          // Load offer from Firestore
+          const docRef = doc(db, "offers", offerId);
+          debugText.textContent += `\nStep 6: Document reference created for offers/${offerId}`;
+          
+          const docSnap = await getDoc(docRef);
+          debugText.textContent += `\nStep 7: Document fetched, exists: ${docSnap.exists()}`;
+          
+          if (!docSnap.exists()) {
+            document.getElementById('offerDetails').innerHTML = `
+              <div class="message message-error">
+                <h3>❌ Offer Not Found</h3>
+                <p>Offer ID: ${offerId}</p>
+                <p>This offer doesn't exist in the database.</p>
+                <a href="dashboard.html" class="btn">Return to Dashboard</a>
+              </div>
+            `;
+            return;
+          }
+          
+          const offerData = docSnap.data();
+          debugText.textContent += `\nStep 8: Data loaded: ${offerData.projectName}`;
+          
+          // Display the offer
+          document.getElementById('offerDetails').innerHTML = `
+            <h2>${offerData.projectName || 'No Name'}</h2>
+            <div class="form-row">
+              <div class="form-group"><strong>Company:</strong> ${offerData.company || 'N/A'}</div>
+              <div class="form-group"><strong>Status:</strong> ${offerData.status || 'pending'}</div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><strong>Value:</strong> $${offerData.value || 'N/A'}</div>
+              <div class="form-group"><strong>Buyer:</strong> ${offerData.buyer || 'N/A'}</div>
+            </div>
+            <p><strong>Description:</strong> ${offerData.description || 'No description'}</p>
+            <p style="margin-top: 20px; color: green; font-weight: bold;">✅ Offer loaded successfully!</p>
+          `;
+          
+        } catch (firestoreError) {
+          debugText.textContent += `\nStep 6-8 ERROR: ${firestoreError.message}`;
+          document.getElementById('offerDetails').innerHTML = `
+            <div class="message message-error">
+              <h3>❌ Firestore Error</h3>
+              <p>${firestoreError.message}</p>
+              <p>Check if Firebase is properly configured.</p>
+            </div>
+          `;
+        }
+      });
+      
+    } catch (importError) {
+      debugText.textContent = `IMPORT ERROR: ${importError.message}`;
+      document.getElementById('offerDetails').innerHTML = `
+        <div class="message message-error">
+          <h3>❌ Script Error</h3>
+          <p>${importError.message}</p>
+          <p>Check if firebase.js exists and has correct exports.</p>
+        </div>
+      `;
     }
   </script>
 </body>

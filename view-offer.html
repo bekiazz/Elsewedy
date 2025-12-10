@@ -14,12 +14,13 @@
       <div class="slogan">ELECTRIC</div>
       <div class="accent-curve"></div>
     </div>
-    <a href="dashboard.html" class="btn">← Back</a>
+    <a href="dashboard.html" class="btn">← Back to Dashboard</a>
   </header>
 
   <main>
     <div class="container" id="offerDetails">
       <h2>Loading offer...</h2>
+      <div id="debugInfo" style="display: none;"></div>
     </div>
   </main>
 
@@ -28,43 +29,94 @@
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
     import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
-    // Redirect to login if not authenticated
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.href = "index.html"; // ✅ Fixed: was "login.html"
-      }
-    });
-
+    // Debug: Show URL parameters
+    console.log("Current URL:", window.location.href);
+    console.log("URL Search:", window.location.search);
+    
     const urlParams = new URLSearchParams(window.location.search);
     const offerId = urlParams.get('id');
     const container = document.getElementById('offerDetails');
+    const debugInfo = document.getElementById('debugInfo');
+
+    // Show debug info (remove in production)
+    debugInfo.innerHTML = `
+      <p>URL Parameters: ${window.location.search}</p>
+      <p>Offer ID: ${offerId || 'NOT FOUND'}</p>
+    `;
+    debugInfo.style.display = 'block';
 
     if (!offerId) {
-      container.innerHTML = "<p class='message message-error'>❌ No offer ID provided.</p>";
+      container.innerHTML = `
+        <div class="message message-error">
+          <h3>❌ No offer ID provided</h3>
+          <p>How to fix:</p>
+          <ul>
+            <li>Make sure you're clicking "View" from the dashboard</li>
+            <li>Check if the offer exists in Firebase</li>
+            <li>URL should look like: offer.html?id=YOUR_OFFER_ID</li>
+          </ul>
+          <a href="dashboard.html" class="btn">Return to Dashboard</a>
+        </div>
+      `;
       return;
     }
 
+    // Redirect to login if not authenticated
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "index.html";
+      } else {
+        // Only load offer if user is authenticated
+        loadOffer();
+      }
+    });
+
     async function loadOffer() {
       try {
+        console.log("Loading offer with ID:", offerId);
+        
         const docRef = doc(db, "offers", offerId);
         const docSnap = await getDoc(docRef);
 
+        console.log("Document exists?", docSnap.exists());
+
         if (!docSnap.exists()) {
-          container.innerHTML = "<p class='message message-error'>Offer not found.</p>";
+          container.innerHTML = `
+            <div class="message message-error">
+              <h3>❌ Offer not found</h3>
+              <p>The offer with ID "${offerId}" doesn't exist in the database.</p>
+              <a href="dashboard.html" class="btn">Return to Dashboard</a>
+            </div>
+          `;
           return;
         }
 
         const d = docSnap.data();
+        console.log("Offer data:", d);
+
         const formatDate = (firestoreDate) => {
           if (!firestoreDate) return 'N/A';
-          // Handle both Timestamp and JS Date
-          const date = firestoreDate.toDate ? firestoreDate.toDate() : new Date(firestoreDate);
-          return date.toLocaleDateString();
+          try {
+            const date = firestoreDate.toDate ? firestoreDate.toDate() : new Date(firestoreDate);
+            return date.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            });
+          } catch (e) {
+            console.error("Date formatting error:", e);
+            return 'Invalid Date';
+          }
         };
-        const formatCurrency = (val) => val ? "$" + Number(val).toLocaleString() : "N/A";
+
+        const formatCurrency = (val) => {
+          if (!val && val !== 0) return "N/A";
+          return "$" + Number(val).toLocaleString('en-US');
+        };
 
         container.innerHTML = `
           <h2>${escapeHtml(d.projectName || 'N/A')}</h2>
+          
           <div class="form-row">
             <div class="form-group"><strong>Product:</strong> ${escapeHtml(d.product || 'N/A')}</div>
             <div class="form-group"><strong>Value:</strong> ${formatCurrency(d.value)}</div>
@@ -80,34 +132,42 @@
             <div class="form-group"><strong>Company:</strong> ${escapeHtml(d.company || 'N/A')}</div>
             <div class="form-group"><strong>Buyer:</strong> ${escapeHtml(d.buyer || 'N/A')}</div>
             <div class="form-group"><strong>Package Code:</strong> ${escapeHtml(d.customerPackageCode || 'N/A')}</div>
-            <div class="form-group"><strong>Email:</strong> ${escapeHtml(d.contacts?.email || 'N/A')}</div>
-            <div class="form-group"><strong>Phone:</strong> ${escapeHtml(d.contacts?.phone || 'N/A')}</div>
+            <div class="form-group"><strong>Email:</strong> ${escapeHtml(d.contacts?.email || d.email || 'N/A')}</div>
+            <div class="form-group"><strong>Phone:</strong> ${escapeHtml(d.contacts?.phone || d.phone || 'N/A')}</div>
           </div>
 
           <h3>Dates</h3>
           <div class="form-row">
-            <div class="form-group"><strong>Start:</strong> ${formatDate(d.startDate)}</div>
-            <div class="form-group"><strong>Expiry:</strong> ${formatDate(d.expiryDate)}</div>
-            <div class="form-group"><strong>Delivery:</strong> ${formatDate(d.deliveryDate)}</div>
-            ${d.status === 'sent' ? `<div class="form-group"><strong>Sent On:</strong> ${formatDate(d.sentAt)}</div>` : ''}
+            <div class="form-group"><strong>Start Date:</strong> ${formatDate(d.startDate)}</div>
+            <div class="form-group"><strong>Expiry Date:</strong> ${formatDate(d.expiryDate)}</div>
+            <div class="form-group"><strong>Delivery Date:</strong> ${formatDate(d.deliveryDate)}</div>
+            ${d.status === 'sent' && d.sentAt ? `<div class="form-group"><strong>Sent On:</strong> ${formatDate(d.sentAt)}</div>` : ''}
           </div>
 
           <h3>Additional Info</h3>
-          <div class="form-group full-width"><strong>Factory:</strong> ${escapeHtml(d.factory || 'N/A')}</div>
-          <div class="form-group full-width"><strong>Probability:</strong> ${d.probability || 0}%</div>
-          <div class="form-group full-width"><strong>Comment Status:</strong> ${escapeHtml(d.commentStatus || 'N/A')}</div>
-          <div class="form-group full-width"><strong>Comment:</strong> ${escapeHtml(d.comment || '') || '—'}</div>
+          <div class="form-group"><strong>Factory:</strong> ${escapeHtml(d.factory || 'N/A')}</div>
+          <div class="form-group"><strong>Probability:</strong> ${d.probability || 0}%</div>
+          <div class="form-group"><strong>Comment Status:</strong> ${escapeHtml(d.commentStatus || 'N/A')}</div>
+          <div class="form-group"><strong>Comment:</strong> ${escapeHtml(d.comment || '') || '—'}</div>
 
           <h3>Description</h3>
           <div class="form-group full-width">${escapeHtml(d.description || '').replace(/\n/g, '<br>')}</div>
         `;
+
       } catch (error) {
         console.error("View Offer Error:", error);
-        container.innerHTML = `<p class="message message-error">❌ Failed to load offer: ${error.message}</p>`;
+        container.innerHTML = `
+          <div class="message message-error">
+            <h3>❌ Failed to load offer</h3>
+            <p>Error: ${error.message}</p>
+            <a href="dashboard.html" class="btn">Return to Dashboard</a>
+          </div>
+        `;
       }
     }
 
     function escapeHtml(unsafe) {
+      if (unsafe == null) return 'N/A';
       if (typeof unsafe !== 'string') return String(unsafe);
       return unsafe
         .replace(/&/g, "&amp;")
@@ -116,8 +176,6 @@
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
     }
-
-    loadOffer();
   </script>
 </body>
 </html>

@@ -252,3 +252,12 @@ main {
 .expiry-alert.notice {
   background-color: #ffb300; /* amber */
 }
+.delete-btn {
+  background: #ffdddd;
+  border: 1px solid #ff5555;
+  color: #b00000;
+}
+
+.delete-btn:hover {
+  background: #ffbbbb;
+}

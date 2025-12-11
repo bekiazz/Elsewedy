@@ -16,3 +16,6 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+function editOffer(id) {
+  window.location.href = `add-offer.html?id=${id}`;
+}

@@ -420,12 +420,21 @@
             <p><strong>Value:</strong> ${value}</p>
             <p><strong>Expiry:</strong> ${expiryStr} ${expiryAlert}</p>
             <p><strong>Status:</strong> <span class="status ${statusClass}">${d.status}</span></p>
-            <div class="offer-actions">
-              <button class="btn" onclick="window.location.href='view-offer.html?id=${doc.id}'">👁️ View</button>
-              ${d.status === "pending" ? 
-                `<button class="btn" onclick="sendOffer('${doc.id}')">📤 Send</button>` : 
-                `<span>Sent: ${d.sentAt?.toDate?.().toLocaleDateString() || 'N/A'}</span>`}
-            </div>
+           <div class="offer-actions">
+
+  <button class="btn" onclick="window.location.href='view-offer.html?id=${doc.id}'">👁️ View</button>
+
+  <button class="btn" onclick="editOffer('${doc.id}')">✏️ Edit</button>
+
+  <button class="btn delete-btn" onclick="deleteOffer('${doc.id}')">🗑️ Delete</button>
+
+  ${d.status === "pending" ? 
+    `<button class="btn" onclick="sendOffer('${doc.id}')">📤 Send</button>` :
+    `<span>Sent: ${d.sentAt?.toDate?.().toLocaleDateString() || 'N/A'}</span>`
+  }
+
+</div>
+
           `;
           grid.appendChild(card);
         });

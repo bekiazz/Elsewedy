@@ -19,3 +19,24 @@ export const db = getFirestore(app);
 function editOffer(id) {
   window.location.href = `add-offer.html?id=${id}`;
 }
+async function deleteOffer(id) {
+  if (!confirm("Are you sure you want to delete this offer? This action cannot be undone.")) {
+    return;
+  }
+
+  try {
+    const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js");
+
+    await deleteDoc(doc(db, "offers", id));
+
+    alert("Offer deleted successfully.");
+    loadOffers(); // Refresh the grid
+
+  } catch (e) {
+    alert("Failed to delete offer: " + e.message);
+  }
+}
+
+window.editOffer = editOffer;
+window.deleteOffer = deleteOffer;
+

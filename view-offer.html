@@ -20,10 +20,6 @@
   <main>
     <div class="container" id="offerDetails">
       <h2>Loading offer...</h2>
-      <div id="debugInfo" style="background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; font-family: monospace; font-size: 12px;">
-        <strong>Debug Log:</strong>
-        <div id="debugLog"></div>
-      </div>
     </div>
   </main>
 
@@ -33,23 +29,14 @@
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
     import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
     
-    const debugLog = document.getElementById('debugLog');
-    function log(msg) {
-      console.log(msg);
-      debugLog.innerHTML += `<br>${msg}`;
-    }
-    
     // Get offer ID from URL
     const urlParams = new URLSearchParams(window.location.search);
     const offerId = urlParams.get('id');
-    
-    log(`Step 1: Offer ID = ${offerId}`);
     
     if (!offerId) {
       document.getElementById('offerDetails').innerHTML = `
         <div class="message message-error">
           <h3>❌ No offer ID provided</h3>
-          <p>URL: ${window.location.href}</p>
           <p>Please select an offer from the dashboard.</p>
           <a href="dashboard.html" class="btn">Return to Dashboard</a>
         </div>
@@ -58,27 +45,20 @@
       // Check authentication and load offer
       onAuthStateChanged(auth, async (user) => {
         if (!user) {
-          log("Step 2: No user - redirecting to login");
           window.location.href = "index.html";
           return;
         }
         
-        log(`Step 2: User authenticated: ${user.email}`);
-        
         try {
           // Load offer from Firestore
-          log(`Step 3: Fetching document offers/${offerId}`);
           const docRef = doc(db, "offers", offerId);
           const docSnap = await getDoc(docRef);
-          
-          log(`Step 4: Document exists: ${docSnap.exists()}`);
           
           if (!docSnap.exists()) {
             document.getElementById('offerDetails').innerHTML = `
               <div class="message message-error">
                 <h3>❌ Offer Not Found</h3>
-                <p>Offer ID: ${offerId}</p>
-                <p>The offer doesn't exist in the database.</p>
+                <p>The offer you're looking for doesn't exist.</p>
                 <a href="dashboard.html" class="btn">Return to Dashboard</a>
               </div>
             `;
@@ -86,45 +66,19 @@
           }
           
           const d = docSnap.data();
-          log(`Step 5: Data loaded - Project: ${d.projectName}`);
-          log(`Step 6: Raw data: ${JSON.stringify(d, null, 2)}`);
-          
-          // Helper function to format dates safely
-          function formatDate(dateField) {
-            if (!dateField) return 'N/A';
-            
-            // Check if it's a Firestore Timestamp
-            if (dateField.toDate && typeof dateField.toDate === 'function') {
-              return dateField.toDate().toLocaleDateString();
-            }
-            
-            // Check if it's already a Date object
-            if (dateField instanceof Date) {
-              return dateField.toLocaleDateString();
-            }
-            
-            // Try to parse as string
-            try {
-              return new Date(dateField).toLocaleDateString();
-            } catch (e) {
-              return 'Invalid Date';
-            }
-          }
           
           // Format dates
-          const startDate = formatDate(d.startDate);
-          const expiryDate = formatDate(d.expiryDate);
-          const deliveryDate = formatDate(d.deliveryDate);
-          const createdAt = formatDate(d.createdAt);
-          const sentAt = d.sentAt ? formatDate(d.sentAt) : 'Not sent yet';
+          const startDate = d.startDate?.toDate ? d.startDate.toDate().toLocaleDateString() : 'N/A';
+          const expiryDate = d.expiryDate?.toDate ? d.expiryDate.toDate().toLocaleDateString() : 'N/A';
+          const deliveryDate = d.deliveryDate?.toDate ? d.deliveryDate.toDate().toLocaleDateString() : 'N/A';
+          const createdAt = d.createdAt?.toDate ? d.createdAt.toDate().toLocaleDateString() : 'N/A';
+          const sentAt = d.sentAt?.toDate ? d.sentAt.toDate().toLocaleDateString() : 'Not sent yet';
           
           // Format value
           const value = d.value ? "$" + d.value.toLocaleString() : 'N/A';
           
           // Status badge
           const statusClass = d.status === "sent" ? "sent" : "pending";
-          
-          log("Step 7: Rendering HTML...");
           
           // Display the offer
           document.getElementById('offerDetails').innerHTML = `
@@ -225,24 +179,14 @@
                 <button class="btn" onclick="markAsSent('${offerId}')">📤 Mark as Sent</button>
               ` : ''}
             </div>
-
-            <details style="margin-top: 30px; padding: 15px; background: #f9f9f9; border-radius: 5px;">
-              <summary style="cursor: pointer; font-weight: bold;">🔍 Debug Info (Click to expand)</summary>
-              <pre style="margin-top: 10px; overflow-x: auto; font-size: 11px;">${JSON.stringify(d, null, 2)}</pre>
-            </details>
           `;
-          
-          log("✅ Step 8: Offer displayed successfully!");
           
         } catch (error) {
           console.error("Error loading offer:", error);
-          log(`❌ ERROR: ${error.message}`);
           document.getElementById('offerDetails').innerHTML = `
             <div class="message message-error">
               <h3>❌ Error Loading Offer</h3>
-              <p><strong>Error:</strong> ${error.message}</p>
-              <p><strong>Error Type:</strong> ${error.name}</p>
-              <p><strong>Stack:</strong> <code style="font-size: 11px;">${error.stack}</code></p>
+              <p>${error.message}</p>
               <a href="dashboard.html" class="btn">Return to Dashboard</a>
             </div>
           `;

@@ -5,6 +5,190 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard – Elsewedy Electric</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Notification Bell Styles */
+    .notification-bell {
+      position: relative;
+      display: inline-block;
+      margin-right: 15px;
+    }
+
+    .notification-bell button {
+      background: white;
+      color: var(--primary-color);
+      border: 2px solid var(--border-color);
+      padding: 10px 16px;
+      font-size: 20px;
+      position: relative;
+    }
+
+    .notification-bell button:hover {
+      background: var(--hover-bg);
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: var(--accent-color);
+      color: white;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    .notification-dropdown {
+      position: absolute;
+      top: 50px;
+      right: 0;
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      width: 350px;
+      max-height: 400px;
+      overflow-y: auto;
+      display: none;
+      z-index: 1000;
+    }
+
+    .notification-dropdown.show {
+      display: block;
+    }
+
+    .notification-header {
+      padding: 15px;
+      border-bottom: 1px solid var(--border-color);
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .notification-item {
+      padding: 15px;
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .notification-item:hover {
+      background: var(--hover-bg);
+    }
+
+    .notification-item.urgent {
+      background: #ffe6e6;
+      border-left: 4px solid #e60012;
+    }
+
+    .notification-item.warning {
+      background: #fff8e1;
+      border-left: 4px solid #ff8f00;
+    }
+
+    .notification-item.notice {
+      background: #fff9e6;
+      border-left: 4px solid #ffb300;
+    }
+
+    .notification-item h4 {
+      margin: 0 0 5px 0;
+      font-size: 14px;
+      color: var(--primary-color);
+    }
+
+    .notification-item p {
+      margin: 0;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .notification-empty {
+      padding: 30px;
+      text-align: center;
+      color: #999;
+    }
+
+    .clear-notifications {
+      padding: 10px 15px;
+      text-align: center;
+      background: var(--light-bg);
+      font-size: 13px;
+      color: var(--accent-color);
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .clear-notifications:hover {
+      background: var(--hover-bg);
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      z-index: 9999;
+      max-width: 400px;
+    }
+
+    .toast {
+      background: white;
+      border-left: 4px solid var(--accent-color);
+      border-radius: 4px;
+      padding: 15px;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    .toast h4 {
+      margin: 0 0 5px 0;
+      font-size: 14px;
+    }
+
+    .toast p {
+      margin: 0;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .toast-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: #999;
+      padding: 0;
+      width: 20px;
+      height: 20px;
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -14,11 +198,29 @@
       <div class="slogan">ELECTRIC</div>
       <div class="accent-curve"></div>
     </div>
-    <div>
+    <div style="display: flex; align-items: center;">
+      <!-- Notification Bell -->
+      <div class="notification-bell">
+        <button id="notificationBtn">🔔</button>
+        <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+        
+        <div id="notificationDropdown" class="notification-dropdown">
+          <div class="notification-header">
+            <span>Expiry Reminders</span>
+            <span id="notificationCount" style="font-size: 12px; color: #999;">0 notifications</span>
+          </div>
+          <div id="notificationList"></div>
+          <div class="clear-notifications" id="clearNotifications">Clear All</div>
+        </div>
+      </div>
+
       <button onclick="window.location.href='add-offer.html'">➕ Add Offer</button>
       <button id="logoutBtn">Logout</button>
     </div>
   </header>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
 
   <main>
     <h2>Active Offers</h2>
@@ -33,6 +235,14 @@
 
     const grid = document.getElementById("offersGrid");
     const msg = document.getElementById("message");
+    const notificationBtn = document.getElementById("notificationBtn");
+    const notificationDropdown = document.getElementById("notificationDropdown");
+    const notificationBadge = document.getElementById("notificationBadge");
+    const notificationList = document.getElementById("notificationList");
+    const notificationCount = document.getElementById("notificationCount");
+    const toastContainer = document.getElementById("toastContainer");
+
+    let notifications = [];
 
     onAuthStateChanged(auth, (user) => {
       if (!user) window.location.href = "index.html";
@@ -42,61 +252,196 @@
       signOut(auth).then(() => window.location.href = "index.html");
     });
 
+    // Toggle notification dropdown
+    notificationBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      notificationDropdown.classList.toggle("show");
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener("click", () => {
+      notificationDropdown.classList.remove("show");
+    });
+
+    notificationDropdown.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+
+    // Clear notifications
+    document.getElementById("clearNotifications").addEventListener("click", () => {
+      notifications = [];
+      updateNotificationUI();
+    });
+
     function escapeHtml(text) {
       const div = document.createElement("div");
       div.textContent = text;
       return div.innerHTML;
     }
 
+    function showToast(notification) {
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.style.position = "relative";
+      
+      const urgencyEmoji = notification.urgency === "urgent" ? "🚨" : 
+                          notification.urgency === "warning" ? "⚠️" : "📅";
+      
+      toast.innerHTML = `
+        <button class="toast-close">×</button>
+        <h4>${urgencyEmoji} ${notification.title}</h4>
+        <p>${notification.message}</p>
+      `;
+      
+      toastContainer.appendChild(toast);
+      
+      toast.querySelector(".toast-close").addEventListener("click", () => {
+        toast.remove();
+      });
+      
+      setTimeout(() => {
+        toast.remove();
+      }, 5000);
+    }
+
+    function updateNotificationUI() {
+      // Update badge
+      if (notifications.length > 0) {
+        notificationBadge.textContent = notifications.length;
+        notificationBadge.style.display = "flex";
+      } else {
+        notificationBadge.style.display = "none";
+      }
+
+      // Update count
+      notificationCount.textContent = `${notifications.length} notification${notifications.length !== 1 ? 's' : ''}`;
+
+      // Update list
+      if (notifications.length === 0) {
+        notificationList.innerHTML = '<div class="notification-empty">No expiring offers 🎉</div>';
+      } else {
+        notificationList.innerHTML = notifications.map(n => `
+          <div class="notification-item ${n.urgency}" onclick="window.location.href='view-offer.html?id=${n.offerId}'">
+            <h4>${n.title}</h4>
+            <p>${n.message}</p>
+          </div>
+        `).join("");
+      }
+    }
+
     async function loadOffers() {
       try {
         const snap = await getDocs(collection(db, "offers"));
         grid.innerHTML = "";
+        notifications = []; // Reset notifications
+        
         if (snap.empty) {
           grid.innerHTML = "<p>No offers found.</p>";
+          updateNotificationUI();
           return;
         }
 
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
         snap.forEach(doc => {
-  const d = doc.data();
-  const statusClass = d.status === "sent" ? "sent" : "pending";
-  const value = d.value ? "$" + d.value.toLocaleString() : "N/A";
-  const expiryDate = d.expiryDate?.toDate ? d.expiryDate.toDate() : new Date(d.expiryDate);
-  const expiryStr = expiryDate ? expiryDate.toLocaleDateString() : "N/A";
+          const d = doc.data();
+          const statusClass = d.status === "sent" ? "sent" : "pending";
+          const value = d.value ? "$" + d.value.toLocaleString() : "N/A";
+          
+          // Parse expiry date
+          let expiryDate;
+          if (d.expiryDate?.toDate) {
+            expiryDate = d.expiryDate.toDate();
+          } else if (d.expiryDate instanceof Date) {
+            expiryDate = d.expiryDate;
+          } else {
+            expiryDate = new Date(d.expiryDate);
+          }
+          
+          const expiryStr = expiryDate ? expiryDate.toLocaleDateString() : "N/A";
 
-  // 🔔 Calculate days until expiry
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // normalize
-  const diffTime = expiryDate - today;
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          // Calculate days until expiry
+          const diffTime = expiryDate - today;
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  let expiryAlert = "";
-  if (diffDays === 1) {
-    expiryAlert = `<span class="expiry-alert urgent">Expires tomorrow!</span>`;
-  } else if (diffDays === 2) {
-    expiryAlert = `<span class="expiry-alert warning">Expires in 2 days</span>`;
-  } else if (diffDays === 3) {
-    expiryAlert = `<span class="expiry-alert notice">Expires in 3 days</span>`;
-  }
+          let expiryAlert = "";
+          let urgency = null;
 
-  const card = document.createElement("div");
-  card.className = "offer-card";
-  card.innerHTML = `
-    <h4>${escapeHtml(d.projectName)}</h4>
-    <p><strong>Company:</strong> ${escapeHtml(d.company)}</p>
-    <p><strong>Package:</strong> ${escapeHtml(d.customerPackageCode)}</p>
-    <p><strong>Value:</strong> ${value}</p>
-    <p><strong>Expiry:</strong> ${expiryStr} ${expiryAlert}</p>
-    <p><strong>Status:</strong> <span class="status ${statusClass}">${d.status}</span></p>
-    <div class="offer-actions">
-      <button class="btn" onclick="window.location.href='view-offer.html?id=${doc.id}'">👁️ View</button>
-      ${d.status === "pending" ? 
-        `<button class="btn" onclick="sendOffer('${doc.id}')">📤 Send</button>` : 
-        `<span>Sent: ${d.sentAt?.toDate?.().toLocaleDateString() || 'N/A'}</span>`}
-    </div>
-  `;
-  grid.appendChild(card);
-});
+          // Create notifications for offers expiring soon
+          if (diffDays <= 3 && diffDays >= 0 && d.status === "pending") {
+            if (diffDays === 0) {
+              expiryAlert = `<span class="expiry-alert urgent">Expires TODAY!</span>`;
+              urgency = "urgent";
+              notifications.push({
+                offerId: doc.id,
+                title: `${d.projectName} expires TODAY!`,
+                message: `${d.company} - Package ${d.customerPackageCode}`,
+                urgency: "urgent"
+              });
+            } else if (diffDays === 1) {
+              expiryAlert = `<span class="expiry-alert urgent">Expires tomorrow!</span>`;
+              urgency = "urgent";
+              notifications.push({
+                offerId: doc.id,
+                title: `${d.projectName} expires tomorrow`,
+                message: `${d.company} - Package ${d.customerPackageCode}`,
+                urgency: "urgent"
+              });
+            } else if (diffDays === 2) {
+              expiryAlert = `<span class="expiry-alert warning">Expires in 2 days</span>`;
+              urgency = "warning";
+              notifications.push({
+                offerId: doc.id,
+                title: `${d.projectName} expires in 2 days`,
+                message: `${d.company} - Package ${d.customerPackageCode}`,
+                urgency: "warning"
+              });
+            } else if (diffDays === 3) {
+              expiryAlert = `<span class="expiry-alert notice">Expires in 3 days</span>`;
+              urgency = "notice";
+              notifications.push({
+                offerId: doc.id,
+                title: `${d.projectName} expires in 3 days`,
+                message: `${d.company} - Package ${d.customerPackageCode}`,
+                urgency: "notice"
+              });
+            }
+          } else if (diffDays < 0 && d.status === "pending") {
+            expiryAlert = `<span class="expiry-alert urgent">EXPIRED</span>`;
+          }
+
+          const card = document.createElement("div");
+          card.className = "offer-card";
+          card.innerHTML = `
+            <h4>${escapeHtml(d.projectName)}</h4>
+            <p><strong>Company:</strong> ${escapeHtml(d.company)}</p>
+            <p><strong>Package:</strong> ${escapeHtml(d.customerPackageCode)}</p>
+            <p><strong>Value:</strong> ${value}</p>
+            <p><strong>Expiry:</strong> ${expiryStr} ${expiryAlert}</p>
+            <p><strong>Status:</strong> <span class="status ${statusClass}">${d.status}</span></p>
+            <div class="offer-actions">
+              <button class="btn" onclick="window.location.href='view-offer.html?id=${doc.id}'">👁️ View</button>
+              ${d.status === "pending" ? 
+                `<button class="btn" onclick="sendOffer('${doc.id}')">📤 Send</button>` : 
+                `<span>Sent: ${d.sentAt?.toDate?.().toLocaleDateString() || 'N/A'}</span>`}
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+
+        // Update notification UI
+        updateNotificationUI();
+
+        // Show toast for urgent notifications only (on page load)
+        const urgentNotifications = notifications.filter(n => n.urgency === "urgent");
+        if (urgentNotifications.length > 0) {
+          // Show first urgent notification as toast
+          setTimeout(() => {
+            showToast(urgentNotifications[0]);
+          }, 500);
+        }
+
       } catch (e) {
         msg.className = "message message-error";
         msg.textContent = "Failed to load offers: " + e.message;
@@ -119,6 +464,9 @@
 
     window.sendOffer = sendOffer;
     loadOffers();
+
+    // Auto-refresh every 5 minutes to check for new expiring offers
+    setInterval(loadOffers, 5 * 60 * 1000);
   </script>
 </body>
 </html>
